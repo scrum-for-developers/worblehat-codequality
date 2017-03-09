@@ -24,11 +24,15 @@ The included sonar is configured to use an embedded database which stores its
 data to `sonar/data/`.
 
 1. startup:
+
     ```bash
     $ ./sonar/bin/<select-your-os-here>/sonar.sh start
     ```    
+    
 2. open your browser and navigate to [http://localhost:9000](http://localhost:9000)
+
 3. build application including sonar analysis
+
     ```bash
     $ mvn clean build sonar:sonar -Psonar
     ```
@@ -53,17 +57,22 @@ In order to install MailCatcher, you need to have
 installed on your machine.
 
 1. installation
+
     ```bash
     $ gem install mailcatcher
     ```
+    
 2. start MailCatcher
+
     ```bash
     # in daemon mode
     $ mailcatcher
     # in foreground with verbose output
     $ mailcatcher -fv
     ```
+    
     The service listens on port `1025` for incoming mails.
+  
 3. on the MailCatchers webservice at [http://localhost:1080](http://localhost:1080)
 you'll find all catched mails.
     

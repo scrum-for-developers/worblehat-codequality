@@ -36,7 +36,7 @@ public class BookingFeeNotifyerService {
 
     @Autowired
     private BorrowingRepository borrowingRepository;
-    
+
     @Scheduled(fixedRateString = "${borrowing.notification.interval}")
     private void sendMail() {
         // setup mail server
