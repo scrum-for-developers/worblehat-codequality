@@ -1,8 +1,0 @@
-TERM trapped.  Shutting down.
-2017.03.09 22:59:54 INFO  app[o.s.p.m.Monitor] Process[ce] is stopping
-2017.03.09 22:59:56 INFO  app[o.s.p.m.Monitor] Process[ce] is stopped
-2017.03.09 22:59:56 INFO  app[o.s.p.m.Monitor] Process[web] is stopping
-2017.03.09 23:00:00 INFO  app[o.s.p.m.Monitor] Process[web] is stopped
-2017.03.09 23:00:00 INFO  app[o.s.p.m.Monitor] Process[es] is stopping
-2017.03.09 23:00:01 INFO  app[o.s.p.m.Monitor] Process[es] is stopped
-<-- Wrapper Stopped
