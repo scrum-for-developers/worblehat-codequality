@@ -36,40 +36,8 @@ public class BookingFeeNotifyerService {
 
     @Autowired
     private BorrowingRepository borrowingRepository;
-
-    /**
-     * Sonar (https://www.sonarqube.org):
-     * <p>
-     * $ ~/../sonar/bin/macosx-universal-64/sonar.sh start
-     * -> http://localhost:9000/
-     *
-     * Run sonar maven goal:
-     * $ mvn -Psonar sonar:sonar
-     *
-     * <p>
-     * MailCatcher (https://mailcatcher.me):
-     * <p>
-     * $ mailcatcher -fv
-     * -> http://localhost:1080/
-     * <p>
-     * <p>
-     * - Tip: Zoom/use presentation mode when doing refactoring: methods get automatically shorter
-     * - Code-Formatting (Shortcut in Idea: Cmd|Ctrl+Alt+L)
-     * - Complexity
-     * - Javadocs
-     * <p>
-     * Acceptance criteria:
-     * * After three weeks (21 days) --> reminder: one week left to return book
-     * * After four weeks (28 days) --> 0 €
-     * * In the fith week (29 - 35 days) --> 1€
-     * * Every week after that (>=36 days) --> 2€
-     * <p>
-     * <p>
-     * Negativbeispiel in JavaX/Mail: {@link InternetAddress#parse(String s, boolean strict, boolean parseHdr)}, Zeile 692
-     */
-
-
-    @Scheduled(fixedRateString = "@borrowing.notification.interval@")
+    
+    @Scheduled(fixedRateString = "${borrowing.notification.interval}")
     private void sendMail() {
         // setup mail server
         Properties properties = System.getProperties();
