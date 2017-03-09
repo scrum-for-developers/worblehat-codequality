@@ -9,7 +9,6 @@ import org.apache.commons.lang3.text.StrSubstitutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import javax.mail.Message;
@@ -24,9 +23,9 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 @Component
-public class BookingFeeNotifyerService {
+public class BorrowingNotificationService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(BookingFeeNotifyerService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(BorrowingNotificationService.class);
 
     @Autowired
     private SMTPSettings smtpSettings;
@@ -37,7 +36,6 @@ public class BookingFeeNotifyerService {
     @Autowired
     private BorrowingRepository borrowingRepository;
 
-    @Scheduled(fixedRateString = "${borrowing.notification.interval}")
     private void sendMail() {
         // setup mail server
         Properties properties = System.getProperties();

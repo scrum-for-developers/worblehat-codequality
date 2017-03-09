@@ -1,20 +1,26 @@
 # Workblehat code quality demo
 
-The worblehat code quality demo application retrieves all borrowed books from
-a (fake) database and checks if the books exceed the allowed borrowing duration.
+The worblehat code quality demo application can be used to show how to find and 
+fix code smells (e.g. code duplication, cyclomatic redundancy, etc.), refactor 
+code with IDE support and increase and measure the test coverage.
+It is designed to have a small boilerplate-footprint so changes
+have a huge effect on the metrics in sonar.
+
+## What does the application
+
+The application is a service that schedules an email notification to borrowers of
+books once per day. 
+
+It retrieves all borrowed books from a (fake) database and checks if the books 
+exceed the allowed borrowing duration.
 
 - In case a book is borrowed for more than three weeks (22 - 28 days), the 
-application sends an email to the borrower with a reminder that there's only one 
-week left to return the book .
+application sends an email to the borrower with a reminder that there are only 
+some days left to return the book .
 - After the fourth week (29 - 35 days) the borrower is informed that he has 
-to pay a 1 € surcharge. 
-- Every week after that (>=36 days) the borrower a reminder is sent and his 
-surcharge is raised by 2€.
-
-The application is designed to only have a small boilerplate-footprint so changes
-have a huge effect on the metrics in sonar.
-It can be used to demonstrate how to fix code smells (e.g. code duplication, 
-cyclomatic redundancy, etc.) and refactor it according to one's taste.
+to pay a 1 € surcharge.
+- Every week after that (>=36 days) a reminder is sent to the borrower and his 
+fee is raised by 2€ (for each week!).
 
 ## Prerequisites
 
