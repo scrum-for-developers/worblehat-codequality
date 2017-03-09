@@ -1,0 +1,6 @@
+smtp:
+  host: localhost
+  port: 1025
+mail:
+  from: info@worblehat.de
+borrowing.notification.interval: 86400000 # daily
