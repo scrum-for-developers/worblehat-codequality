@@ -18,7 +18,7 @@ cyclomatic redundancy, etc.) and refactor it according to one's taste.
 
 ## Prerequisites
 
-### Sonarqube (https://www.sonarqube.org)
+### Sonarqube
 
 The included sonar is configured to use an embedded database which stores its 
 data to `sonar/data/`.
@@ -40,6 +40,7 @@ data to `sonar/data/`.
 In order to delete all analysis data, just delete all files and subfolders in 
  directory `sonar/data/`.
 
+See [projectpage](https://www.sonarqube.org) for further documentation. 
 
 ### SMTP Mail Relay
 
@@ -48,7 +49,7 @@ For the demo it is not a good idea to  use a _real_ SMTP service.
 Alternativly you should use a fake service catching all mails that are 
 send by the application.
 
-An easy-to-use fake service is the [MailCatcher](https://mailcatcher.me).
+An easy-to-use fake service is [MailCatcher](https://mailcatcher.me).
 
 #### Installing MailCatcher
 
@@ -65,8 +66,9 @@ installed on your machine.
 2. start MailCatcher
 
     ```bash
-    # in daemon mode
+    # as daemon
     $ mailcatcher
+ 
     # in foreground with verbose output
     $ mailcatcher -fv
     ```
