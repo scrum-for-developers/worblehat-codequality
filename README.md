@@ -8,8 +8,9 @@ have a huge effect on the metrics in sonar.
 
 ## What does the application
 
-The application is a service that schedules an email notification to borrowers of
-books once per day. 
+The application is a service that is run once per day and that sends email 
+notification to borrowers of books where the borrowing duration exceeds the 
+allowed maximun. 
 
 It retrieves all borrowed books from a (fake) database and checks if the books 
 exceed the allowed borrowing duration.

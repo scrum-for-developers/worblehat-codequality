@@ -1,5 +1,6 @@
 package de.codecentric.psd.worblehat.codequality.persistence.domain;
 
+import com.google.common.base.MoreObjects;
 import org.joda.time.DateTime;
 
 import java.io.Serializable;
@@ -12,7 +13,7 @@ public class Borrowing implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-	private long id; // NOSONAR
+	private long id;
 	private String borrowerEmailAddress;
 	private Date borrowDate;
 	private Book borrowedBook;
@@ -42,5 +43,14 @@ public class Borrowing implements Serializable {
 		this.borrowedBook = book;
 		this.borrowerEmailAddress = borrowerEmailAddress;
 		this.borrowDate = borrowDate.toDate();
+	}
+
+	@Override
+	public String toString() {
+		return MoreObjects.toStringHelper(this)
+				.add("borrowerEmailAddress", borrowerEmailAddress)
+				.add("borrowDate", borrowDate)
+				.add("borrowedBook", borrowedBook)
+				.toString();
 	}
 }

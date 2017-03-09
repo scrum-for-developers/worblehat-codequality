@@ -2,4 +2,7 @@
 .idea
 .DS_Store
 target
+sonar/logs/*
 sonar/data/*
+sonar/**/SonarQube.pid
+sonar/temp/*

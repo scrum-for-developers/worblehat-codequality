@@ -1,5 +1,7 @@
 package de.codecentric.psd.worblehat.codequality.persistence.domain;
 
+import com.google.common.base.MoreObjects;
+
 import java.io.Serializable;
 
 /**
@@ -85,5 +87,17 @@ public class Book implements Serializable {
 
 	public void setBorrowing(Borrowing borrowing) {
 		this.borrowing = borrowing;
+	}
+
+	@Override
+	public String toString() {
+		return MoreObjects.toStringHelper(this)
+				.add("title", title)
+				.add("author", author)
+				.add("edition", edition)
+				.add("isbn", isbn)
+				.add("yearOfPublication", yearOfPublication)
+				.add("borrowing", borrowing)
+				.toString();
 	}
 }
