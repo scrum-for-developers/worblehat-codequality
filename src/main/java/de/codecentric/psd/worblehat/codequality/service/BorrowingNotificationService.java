@@ -1,137 +1,130 @@
 package de.codecentric.psd.worblehat.codequality.service;
 
-import com.google.common.collect.ImmutableMap;
 import de.codecentric.psd.worblehat.codequality.configuration.MailSettings;
-import de.codecentric.psd.worblehat.codequality.configuration.SMTPSettings;
 import de.codecentric.psd.worblehat.codequality.persistence.domain.Borrowing;
 import de.codecentric.psd.worblehat.codequality.persistence.repository.BorrowingRepository;
-import org.apache.commons.lang3.text.StrSubstitutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import javax.mail.Message;
-import javax.mail.MessagingException;
-import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
 import java.util.Date;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
+import static de.codecentric.psd.worblehat.codequality.service.Mail.aMail;
+
 /**
- * see {@link InternetAddress#parse(String, boolean, boolean)} for a nice example of bad code produced by sun/oracle!
+ * Service for sending notifications to borrowers that their borrowing time is about to exceed or already has exceeded.
  */
 @Component
 public class BorrowingNotificationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(BorrowingNotificationService.class);
 
-    public void notify_borrowers_via_email_if_their_book_boorowings_last_longer_than_the_allowed_limit() {
-        // setup ml server
-        Properties p = System.getProperties();
-        p.setProperty("mail.smtp.host", smtp.getHost());
-        p.setProperty("mail.smtp.port", smtp.getPort());
+    public static final int MAX_BORROW_DAYS = 28;
+    public static final double FEE_FOR_FIRST_WEEK = 1.00;
+    public static final double FEE_FOR_SECOND_AND_FURTHER_WEEKS = 2.00;
 
-        // get the default Session object.
-        Session session = Session.getDefaultInstance(p);
-
-        List<Borrowing> bs = rep.findAllBorrowings();
-
-        for (Borrowing b : bs) {
-        long d = TimeUnit.DAYS.convert(new Date().getTime() - b.getBorrowDate().getTime(), TimeUnit.MILLISECONDS);
-        if (LOG.isDebugEnabled()) LOG.debug("Check borrowing (age: {} days) (content: {}).", d, b);
-        if (d >= 20) {
-        if (d <= 28) {
-        // inform that borrowing period ends next week
-        try {
-        MimeMessage message = new MimeMessage(session);
-        message.setFrom(new InternetAddress(ml.getFrom()));
-        message.addRecipient(Message.RecipientType.TO, new InternetAddress(b.getBorrowerEmailAddress()));
-        message.setSubject("Worblehat reminder: Your borrowing period for a book ends soon!");
-        message.setText(StrSubstitutor.replace(
-        "Hello,\n"
-                + "\n"
-                + "your borrowing period for the book '${bookTitle}' (ISBN: ${isbn}) ends next week.\n"
-                + "Please return the book in the next ${daysLeft} days otherwise we have to claim a surcharge (see tariffs below).\n"
-                + "\n"
-                + "1 € for the first week after borrowing period expired\n"
-                + "2 € for every further week\n"
-                + "\n"
-                + "Best regards,\n"
-                + "your Worblehat team.",
-        ImmutableMap.of(
-        "bookTitle", b.getBorrowedBook().getTitle(),
-        "isbn", b.getBorrowedBook().getIsbn(),
-        "daysLeft", 28 - d
-        )));
-        Transport.send(message);
-        LOG.info("Successfully sent message to recipient '{}'.", b.getBorrowerEmailAddress());
-        } catch (MessagingException e) {
-            LOG.warn(String.format("Failed to send message to recipient '%s'.", b.getBorrowerEmailAddress()), e);
-        }
-        } else {
-        // inform the borrower that borrowing period has ended and that the borrower has to pay a surcharge
-        try {
-        double fee = 1.00 + (d >= 36 ? Math.ceil((d - 35) / 7d) * 2 : 0);
-
-        MimeMessage m = new MimeMessage(session);
-        m.setFrom(new InternetAddress(ml.getFrom()));
-        m.addRecipient(Message.RecipientType.TO, new InternetAddress(b.getBorrowerEmailAddress()));
-        m.setSubject("Worblehat reminder: Your borrowing period for a book has ended!");
-        m.setText(StrSubstitutor.replace(
-        "Hello,\n"
-                + "\n"
-                + "your borrowing period for the book '${bookTitle}' (ISBN: ${isbn}) ended ${daysOverDueDate} days ago.\n"
-                + "\n"
-                + "For the delay we charge you a fee of ${fee} €.\n"
-                + "\n"
-                + "Please return the book as soon as possible and remember to bring enough money to pay your bill (we also accept credit cards).\n"
-                + "\n"
-                + "Our tariffs: \n"
-                + "\n"
-                + "1 € for the first week after borrowing period expired\n"
-                + "2 € for every further week\n"
-                + "\n"
-                + "Best regards,\n"
-                + "your Worblehat team.",
-        ImmutableMap.of(
-        "bookTitle", b.getBorrowedBook().getTitle(),
-        "isbn", b.getBorrowedBook().getIsbn(),
-        "daysOverDueDate", String.valueOf(d - 28),
-        "fee", String.format("%.2f", fee)
-        )
-        ));
-        Transport.send(m);
-        LOG.info("Successfully sent message to recipient '{}'.", b.getBorrowerEmailAddress());
-        } catch (MessagingException e) {
-            LOG.warn(String.format("Failed to send message to recipient '%s'.", b.getBorrowerEmailAddress()), e);
-        }
-        }
-        }
-        }
-    }
-
-    private SMTPSettings smtp;
-    private MailSettings ml;
-    private BorrowingRepository rep;
+    private MailSettings mailSettings;
+    private MailingService mailingService;
+    private BorrowingRepository borrowingRepository;
 
     @Autowired
-    public BorrowingNotificationService(SMTPSettings smtp, MailSettings ml, BorrowingRepository rep) {
-        this.smtp = smtp;
-        this.ml = ml;
-        this.rep = rep;
+    public BorrowingNotificationService(MailSettings mailSettings, MailingService mailingService, BorrowingRepository borrowingRepository) {
+        this.mailSettings = mailSettings;
+        this.mailingService = mailingService;
+        this.borrowingRepository = borrowingRepository;
     }
 
-    public BorrowingNotificationService() {
-        // do nothing
+    public void notifyBorrowers() {
+        List<Borrowing> borrowings = borrowingRepository.findAllBorrowings();
+
+        for (Borrowing borrowing : borrowings) {
+            long borrowedDays = TimeUnit.DAYS.convert(new Date().getTime() - borrowing.getBorrowDate().getTime(), TimeUnit.MILLISECONDS);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Check borrowing (age: {} days) (content: {}).", borrowedDays, borrowing);
+            }
+            if (borrowedDays >= 20) {
+                if (borrowedDays <= MAX_BORROW_DAYS) {
+                    notifyAboutUpcomingBorrowingEnd(borrowing, borrowedDays);
+                } else {
+                    notifyAboutExceededBorrowingDuration(borrowing, borrowedDays);
+                }
+            }
+        }
     }
 
-    private void whatthehell() {
-        System.out.println("initialized");
+    /**
+     * Inform borrower that borrowing period ends next week
+     */
+    private void notifyAboutUpcomingBorrowingEnd(Borrowing borrowing, long borrowedDays) {
+        mailingService.sendMail(
+                aMail()
+                        .from(mailSettings.getFrom())
+                        .to(borrowing.getBorrowerEmailAddress())
+                        .withSubject("Worblehat reminder: Your borrowing period for a book ends soon!")
+                        .withBody(
+                                "Hello,",
+                                "",
+                                "your borrowing period for the book '${bookTitle}' (ISBN: ${isbn}) ends next week.",
+                                "Please return the book in the next ${daysLeft} days otherwise we have to claim a surcharge (see tariffs below).",
+                                "",
+                                "1 € for the first week after borrowing period expired",
+                                "2 € for every further week",
+                                "",
+                                "Best regards,",
+                                "your Worblehat team."
+                        )
+                        .withArgument("bookTitle", borrowing.getBorrowedBook().getTitle())
+                        .withArgument("isbn", borrowing.getBorrowedBook().getIsbn())
+                        .withArgument("daysLeft", String.valueOf(MAX_BORROW_DAYS - borrowedDays))
+        );
+    }
+
+    /**
+     * Inform borrower that the borrowing period has ended and that the borrower has to pay a surcharge.
+     */
+    private void notifyAboutExceededBorrowingDuration(Borrowing borrowing, long borrowedDays) {
+        double fee = calculateFee(borrowedDays);
+
+        mailingService.sendMail(
+                aMail()
+                        .from(mailSettings.getFrom())
+                        .to(borrowing.getBorrowerEmailAddress())
+                        .withSubject("Worblehat reminder: Your borrowing period for a book has ended!")
+                        .withBody(
+                                "Hello,",
+                                "",
+                                "your borrowing period for the book '${bookTitle}' (ISBN: ${isbn}) ended ${daysOverDueDate} days ago.",
+                                "",
+                                "For the delay we charge you a fee of ${fee} €.",
+                                "",
+                                "Please return the book as soon as possible and remember to bring enough money to pay your bill (we also accept credit cards).",
+                                "",
+                                "Our tariffs:",
+                                "",
+                                "1 € for the first week after borrowing period expired",
+                                "2 € for every further week",
+                                "",
+                                "Best regards,",
+                                "your Worblehat team."
+                        )
+                        .withArgument("bookTitle", borrowing.getBorrowedBook().getTitle())
+                        .withArgument("isbn", borrowing.getBorrowedBook().getIsbn())
+                        .withArgument("daysOverDueDate", String.valueOf(borrowedDays - MAX_BORROW_DAYS))
+                        .withArgument("fee", String.format("%.2f", fee))
+        );
+    }
+
+    private double calculateFee(long borrowedDays) {
+        double fee = 0;
+        if (borrowedDays > MAX_BORROW_DAYS) {
+            fee += FEE_FOR_FIRST_WEEK;
+        }
+        if (borrowedDays >= 36) {
+            fee += Math.ceil((borrowedDays - 35) / 7d) * FEE_FOR_SECOND_AND_FURTHER_WEEKS;
+        }
+        return fee;
     }
 }

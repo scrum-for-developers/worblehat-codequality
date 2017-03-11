@@ -1,104 +1,114 @@
 package de.codecentric.psd.worblehat.codequality.service;
 
 import com.dumbster.smtp.SimpleSmtpServer;
-import com.dumbster.smtp.SmtpMessage;
 import de.codecentric.psd.worblehat.codequality.configuration.MailSettings;
-import de.codecentric.psd.worblehat.codequality.configuration.SMTPSettings;
 import de.codecentric.psd.worblehat.codequality.persistence.domain.Book;
 import de.codecentric.psd.worblehat.codequality.persistence.domain.Borrowing;
 import de.codecentric.psd.worblehat.codequality.persistence.repository.BorrowingRepository;
 import org.joda.time.DateTime;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.util.Arrays;
 import java.util.Collections;
 
 import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.Matchers.isEmptyString;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class BorrowingNotificationServiceTest {
 
-    private SimpleSmtpServer server;
-    private BorrowingNotificationService service;
-    private BorrowingRepository repo;
+    private SimpleSmtpServer smtpServer;
+    private BorrowingNotificationService borrowingNotificationService;
+    private MailingService mailingService;
+    private BorrowingRepository borrowingRepository;
 
     @Before
-    public void setUp() throws Exception {
-        SMTPSettings smtpSettings = new SMTPSettings();
-        smtpSettings.setHost("127.0.0.1");
-        smtpSettings.setPort("10025");
-
+    public void before() throws Exception {
         MailSettings mailSettings = new MailSettings();
         mailSettings.setFrom("from.address@test.abc");
 
-        repo = Mockito.mock(BorrowingRepository.class);
-        service = new BorrowingNotificationService(smtpSettings, mailSettings, repo);
-        server = SimpleSmtpServer.start(10025);
+        borrowingRepository = Mockito.mock(BorrowingRepository.class);
+        mailingService = Mockito.mock(MailingService.class);
+        borrowingNotificationService = new BorrowingNotificationService(mailSettings, mailingService, borrowingRepository);
     }
 
-    @After
-    public void tearDown() {
-        server.stop();
+
+    @Test
+    public void shouldNotSendAMessageIfNoBooksAreBorrowed() throws Exception {
+        when(borrowingRepository.findAllBorrowings()).thenReturn(Collections.emptyList());
+        borrowingNotificationService.notifyBorrowers();
+        verifyZeroInteractions(mailingService);
     }
 
     @Test
-    public void test_notification_of_no_borrowers_if_nobody_has_borrowed_a_book() throws Exception {
-        when(repo.findAllBorrowings()).thenReturn(Collections.emptyList());
-        service.notify_borrowers_via_email_if_their_book_boorowings_last_longer_than_the_allowed_limit();
-        assertThat(server.getReceivedEmails().size(), is(0));
+    public void shouldSendReminderIfBookIs2DaysBeforeDueDate() {
+        Book book = new Book("title", "author", "edition", "isbn", 1234);
+        when(borrowingRepository.findAllBorrowings())
+                .thenReturn(Arrays.asList(new Borrowing(book, "borrower@email.de", DateTime.now().minusDays(26))));
+
+        borrowingNotificationService.notifyBorrowers();
+
+        ArgumentCaptor<Mail> mailArgument = ArgumentCaptor.forClass(Mail.class);
+        verify(mailingService).sendMail(mailArgument.capture());
+
+        Mail mail = mailArgument.getValue();
+        assertThat(mail, is(not(nullValue())));
+        assertThat(mail.getFrom(), is(equalTo("from.address@test.abc")));
+        assertThat(mail.getTo(), is(equalTo("borrower@email.de")));
+        assertThat(mail.getSubject(), is(equalTo("Worblehat reminder: Your borrowing period for a book ends soon!")));
+        assertThat(mail.getBody(), not(isEmptyString()));
+        assertThat(mail.getArguments().get("bookTitle"), is(equalTo("title")));
+        assertThat(mail.getArguments().get("isbn"), is(equalTo("isbn")));
+        assertThat(mail.getArguments().get("daysLeft"), is(equalTo("2")));
     }
 
     @Test
-    public void test_notification_of_borrower_if_borrower_has_to_return_it_in_2_days() {
-        when(repo.findAllBorrowings()).thenReturn(Arrays.asList(
-                new Borrowing(
-                        new Book("title", "author", "edition", "isbn", 1234), "borrower@email.de", DateTime.now().minusDays(26))));
-
-        service.notify_borrowers_via_email_if_their_book_boorowings_last_longer_than_the_allowed_limit();
-
-        assertThat(server.getReceivedEmails().size(), is(1));
-        SmtpMessage smtpMessage = server.getReceivedEmails().get(0);
-        assertThat(smtpMessage.getHeaderValue("From"), is(equalTo("from.address@test.abc")));
-        assertThat(smtpMessage.getHeaderValue("To"), is(equalTo("borrower@email.de")));
-        assertThat(smtpMessage.getHeaderValue("Subject"), is(equalTo("Worblehat reminder: Your borrowing period for a book ends soon!")));
-        assertThat(smtpMessage.getBody(), containsString("Please return the book in the next 2 days"));
-    }
-
-    @Test
-    public void test_notification_of_borrower_if_borrower_had_to_return_it_2_days_ago() {
-        when(repo.findAllBorrowings()).thenReturn(Arrays.asList(
+    public void shouldSendReminderIfBookIs2DaysAfterDueDate() {
+        when(borrowingRepository.findAllBorrowings()).thenReturn(Arrays.asList(
                 new Borrowing(
                         new Book("title", "author", "edition", "isbn", 1234), "borrower@email.de", DateTime.now().minusDays(30))));
 
-        service.notify_borrowers_via_email_if_their_book_boorowings_last_longer_than_the_allowed_limit();
+        borrowingNotificationService.notifyBorrowers();
 
-        assertThat(server.getReceivedEmails().size(), is(1));
-        SmtpMessage smtpMessage = server.getReceivedEmails().get(0);
-        assertThat(smtpMessage.getHeaderValue("From"), is(equalTo("from.address@test.abc")));
-        assertThat(smtpMessage.getHeaderValue("To"), is(equalTo("borrower@email.de")));
-        assertThat(smtpMessage.getHeaderValue("Subject"), is(equalTo("Worblehat reminder: Your borrowing period for a book has ended!")));
-        assertThat(smtpMessage.getBody(), containsString("your borrowing period for the book 'title' (ISBN: isbn) ended 2 days ago."));
-        assertThat(smtpMessage.getBody(), containsString("For the delay we charge you a fee of 1,00 =E2=82=AC."));
+        ArgumentCaptor<Mail> mailArgument = ArgumentCaptor.forClass(Mail.class);
+        verify(mailingService).sendMail(mailArgument.capture());
+
+        Mail mail = mailArgument.getValue();
+        assertThat(mail, is(not(nullValue())));
+        assertThat(mail.getFrom(), is(equalTo("from.address@test.abc")));
+        assertThat(mail.getTo(), is(equalTo("borrower@email.de")));
+        assertThat(mail.getSubject(), is(equalTo("Worblehat reminder: Your borrowing period for a book has ended!")));
+        assertThat(mail.getBody(), not(isEmptyString()));
+        assertThat(mail.getArguments().get("bookTitle"), is(equalTo("title")));
+        assertThat(mail.getArguments().get("isbn"), is(equalTo("isbn")));
+        assertThat(mail.getArguments().get("daysOverDueDate"), is(equalTo("2")));
+        assertThat(mail.getArguments().get("fee"), is(equalTo("1,00")));
     }
 
     @Test
-    public void test_notification_of_borrower_if_borrower_had_to_return_it_20_days_ago() {
-        when(repo.findAllBorrowings()).thenReturn(Arrays.asList(
+    public void shouldCalculateCorrectFeeIfBookIs20DaysAfterDueDate() {
+        when(borrowingRepository.findAllBorrowings()).thenReturn(Arrays.asList(
                 new Borrowing(
                         new Book("title", "author", "edition", "isbn", 1234), "borrower@email.de", DateTime.now().minusDays(48))));
 
-        service.notify_borrowers_via_email_if_their_book_boorowings_last_longer_than_the_allowed_limit();
+        borrowingNotificationService.notifyBorrowers();
 
-        assertThat(server.getReceivedEmails().size(), is(1));
-        SmtpMessage smtpMessage = server.getReceivedEmails().get(0);
-        assertThat(smtpMessage.getHeaderValue("From"), is(equalTo("from.address@test.abc")));
-        assertThat(smtpMessage.getHeaderValue("To"), is(equalTo("borrower@email.de")));
-        assertThat(smtpMessage.getHeaderValue("Subject"), is(equalTo("Worblehat reminder: Your borrowing period for a book has ended!")));
-        assertThat(smtpMessage.getBody(), containsString("your borrowing period for the book 'title' (ISBN: isbn) ended 20 days ago."));
-        assertThat(smtpMessage.getBody(), containsString("For the delay we charge you a fee of 5,00 =E2=82=AC."));
+        ArgumentCaptor<Mail> mailArgument = ArgumentCaptor.forClass(Mail.class);
+        verify(mailingService).sendMail(mailArgument.capture());
+
+        Mail mail = mailArgument.getValue();
+        assertThat(mail, is(not(nullValue())));
+        assertThat(mail.getFrom(), is(equalTo("from.address@test.abc")));
+        assertThat(mail.getTo(), is(equalTo("borrower@email.de")));
+        assertThat(mail.getSubject(), is(equalTo("Worblehat reminder: Your borrowing period for a book has ended!")));
+        assertThat(mail.getBody(), not(isEmptyString()));
+        assertThat(mail.getArguments().get("bookTitle"), is(equalTo("title")));
+        assertThat(mail.getArguments().get("isbn"), is(equalTo("isbn")));
+        assertThat(mail.getArguments().get("daysOverDueDate"), is(equalTo("20")));
+        assertThat(mail.getArguments().get("fee"), is(equalTo("5,00")));
     }
 }

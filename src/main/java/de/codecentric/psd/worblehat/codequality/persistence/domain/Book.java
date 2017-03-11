@@ -58,7 +58,7 @@ public class Book implements Serializable {
     }
 
     public String getBorrowerEmail() {
-        return borrowing == null ? "" : borrowing.getBorrowerEmailAddress();
+        return borrowing.getBorrowerEmailAddress();
     }
 
     public void setTitle(String title) {

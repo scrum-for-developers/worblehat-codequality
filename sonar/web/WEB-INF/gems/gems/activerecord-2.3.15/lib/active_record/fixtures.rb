@@ -435,7 +435,7 @@ end
 
 class Fixtures < (RUBY_VERSION < '1.9' ? YAML::Omap : Hash)
   MAX_ID = 2 ** 30 - 1
-  DEFAULT_FILTER_RE = /\.ya?ml$/
+  DEFAULT_FILTER_RE = /\.ya?mailSettings$/
 
   @@all_cached_fixtures = {}
 
