@@ -19,6 +19,7 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.util.Date;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -29,15 +30,6 @@ import java.util.concurrent.TimeUnit;
 public class BorrowingNotificationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(BorrowingNotificationService.class);
-
-    @Autowired
-    private SMTPSettings smtp;
-
-    @Autowired
-    private MailSettings ml;
-
-    @Autowired
-    private BorrowingRepository rep;
 
     public void notify_borrowers_via_email_if_their_book_boorowings_last_longer_than_the_allowed_limit() {
         // setup ml server
@@ -82,10 +74,10 @@ public class BorrowingNotificationService {
         } catch (MessagingException e) {
             LOG.warn(String.format("Failed to send message to recipient '%s'.", b.getBorrowerEmailAddress()), e);
         }
-        } else if ((d - 28) % 7 == 0) {
+        } else {
         // inform the borrower that borrowing period has ended and that the borrower has to pay a surcharge
         try {
-        double fee = 1.00 + d >= 36 ? Math.ceil((d - 35) / 7d) * 2 : 0;
+        double fee = 1.00 + (d >= 36 ? Math.ceil((d - 35) / 7d) * 2 : 0);
 
         MimeMessage m = new MimeMessage(session);
         m.setFrom(new InternetAddress(ml.getFrom()));
@@ -122,6 +114,17 @@ public class BorrowingNotificationService {
         }
         }
         }
+    }
+
+    private SMTPSettings smtp;
+    private MailSettings ml;
+    private BorrowingRepository rep;
+
+    @Autowired
+    public BorrowingNotificationService(SMTPSettings smtp, MailSettings ml, BorrowingRepository rep) {
+        this.smtp = smtp;
+        this.ml = ml;
+        this.rep = rep;
     }
 
     public BorrowingNotificationService() {

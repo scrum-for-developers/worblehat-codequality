@@ -62,6 +62,12 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.github.kirviq</groupId>
+            <artifactId>dumbster</artifactId>
+            <version>1.7.1</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
